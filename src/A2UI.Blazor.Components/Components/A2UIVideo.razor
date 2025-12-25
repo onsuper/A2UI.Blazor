@@ -1,8 +1,33 @@
 @inherits A2UIComponentBase
-@* Placeholder *@
-<video class="@GetCssClass()" controls></video>
+@using A2UI.Core.Processing
+@inject DataBindingResolver BindingResolver
+
+@if (!string.IsNullOrEmpty(ResolvedUrl))
+{
+    <video class="@GetCssClass()" style="@GetInlineStyle()" controls>
+        <source src="@ResolvedUrl" />
+        您的浏览器不支持视频播放。
+    </video>
+}
 
 @code {
-    protected override string GetCssClass() => Theme.Components.Video;
+    private string? ResolvedUrl;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the url bound value
+        var urlValue = GetDictionaryProperty("url");
+        if (urlValue != null)
+        {
+            ResolvedUrl = BindingResolver.ResolveString(urlValue, SurfaceId, Component.DataContextPath);
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Video;
+    }
 }
 

@@ -1,8 +1,67 @@
 @inherits A2UIComponentBase
-@* Placeholder - to be fully implemented *@
-<div class="@GetCssClass()">CheckBox Component</div>
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    <label style="display: flex; align-items: center; cursor: pointer;">
+        <input type="checkbox" 
+               checked="@IsChecked" 
+               @onchange="HandleChange" 
+               style="margin-right: 8px;" />
+        <span>@ResolvedLabel</span>
+    </label>
+</div>
 
 @code {
-    protected override string GetCssClass() => Theme.Components.CheckBox;
+    private string? ResolvedLabel;
+    private bool IsChecked;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the label bound value
+        var labelValue = GetDictionaryProperty("label");
+        if (labelValue != null)
+        {
+            ResolvedLabel = BindingResolver.ResolveString(labelValue, SurfaceId, Component.DataContextPath);
+        }
+
+        // Get the value bound value
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null)
+        {
+            var resolvedValue = BindingResolver.ResolveValue(valueData, SurfaceId, Component.DataContextPath);
+            IsChecked = resolvedValue is bool boolValue && boolValue;
+        }
+    }
+
+    private void HandleChange(ChangeEventArgs e)
+    {
+        if (e.Value is bool newValue)
+        {
+            IsChecked = newValue;
+
+            // Dispatch data update event
+            var valueData = GetDictionaryProperty("value");
+            if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
+            {
+                var dataUpdate = EventDispatcher.CreateDataUpdate(
+                    SurfaceId,
+                    Component.Id,
+                    path,
+                    newValue
+                );
+                EventDispatcher.DispatchDataUpdate(dataUpdate);
+            }
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.CheckBox;
+    }
 }
 

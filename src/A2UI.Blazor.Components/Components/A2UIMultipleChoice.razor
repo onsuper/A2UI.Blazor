@@ -1,8 +1,179 @@
 @inherits A2UIComponentBase
-@* Placeholder - to be fully implemented *@
-<div class="@GetCssClass()">MultipleChoice Component</div>
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    @if (!string.IsNullOrEmpty(ResolvedLabel))
+    {
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">@ResolvedLabel</label>
+    }
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        @if (Options != null)
+        {
+            @foreach (var option in Options)
+            {
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    @if (IsMultipleSelection)
+                    {
+                        <input type="checkbox" 
+                               checked="@IsSelected(option.Value)" 
+                               @onchange="@(e => HandleCheckboxChange(option.Value, e))"
+                               style="margin-right: 8px;" />
+                    }
+                    else
+                    {
+                        <input type="radio" 
+                               name="@Component.Id" 
+                               checked="@IsSelected(option.Value)" 
+                               @onchange="@(e => HandleRadioChange(option.Value))"
+                               style="margin-right: 8px;" />
+                    }
+                    <span>@option.Label</span>
+                </label>
+            }
+        }
+    </div>
+</div>
 
 @code {
-    protected override string GetCssClass() => Theme.Components.MultipleChoice;
+    private string? ResolvedLabel;
+    private List<ChoiceOption> Options = new();
+    private List<string> SelectedValues = new();
+    private bool IsMultipleSelection;
+
+    private class ChoiceOption
+    {
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the label bound value
+        var labelValue = GetDictionaryProperty("label");
+        if (labelValue != null)
+        {
+            ResolvedLabel = BindingResolver.ResolveString(labelValue, SurfaceId, Component.DataContextPath);
+        }
+
+        // Get usage hint
+        var usageHint = GetStringProperty("usageHint");
+        IsMultipleSelection = usageHint?.ToLower() == "multipleselection";
+
+        // Get options
+        if (Component.Properties.TryGetValue("options", out var optionsValue))
+        {
+            Options = ParseOptions(optionsValue);
+        }
+
+        // Get selected values
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null)
+        {
+            var resolvedValue = BindingResolver.ResolveValue(valueData, SurfaceId, Component.DataContextPath);
+            if (resolvedValue is List<object> objectList)
+            {
+                SelectedValues = objectList.Select(x => x?.ToString() ?? "").ToList();
+            }
+            else if (resolvedValue is string[] stringArray)
+            {
+                SelectedValues = stringArray.ToList();
+            }
+            else if (resolvedValue is List<string> stringList)
+            {
+                SelectedValues = stringList;
+            }
+        }
+    }
+
+    private List<ChoiceOption> ParseOptions(object optionsValue)
+    {
+        var result = new List<ChoiceOption>();
+
+        try
+        {
+            if (optionsValue is List<object> objectList)
+            {
+                foreach (var item in objectList)
+                {
+                    if (item is Dictionary<string, object> dict)
+                    {
+                        var option = new ChoiceOption();
+                        if (dict.TryGetValue("label", out var labelObj))
+                        {
+                            var labelData = labelObj as Dictionary<string, object>;
+                            option.Label = labelData != null ? 
+                                BindingResolver.ResolveString(labelData, SurfaceId, Component.DataContextPath) ?? "" :
+                                labelObj?.ToString() ?? "";
+                        }
+                        if (dict.TryGetValue("value", out var valueObj))
+                        {
+                            option.Value = valueObj?.ToString() ?? "";
+                        }
+                        result.Add(option);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[A2UIMultipleChoice] Error parsing options: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private bool IsSelected(string value)
+    {
+        return SelectedValues.Contains(value);
+    }
+
+    private void HandleCheckboxChange(string value, ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                if (!SelectedValues.Contains(value))
+                    SelectedValues.Add(value);
+            }
+            else
+            {
+                SelectedValues.Remove(value);
+            }
+
+            DispatchValueUpdate();
+        }
+    }
+
+    private void HandleRadioChange(string value)
+    {
+        SelectedValues = new List<string> { value };
+        DispatchValueUpdate();
+    }
+
+    private void DispatchValueUpdate()
+    {
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
+        {
+            var dataUpdate = EventDispatcher.CreateDataUpdate(
+                SurfaceId,
+                Component.Id,
+                path,
+                SelectedValues
+            );
+            EventDispatcher.DispatchDataUpdate(dataUpdate);
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.MultipleChoice;
+    }
 }
 

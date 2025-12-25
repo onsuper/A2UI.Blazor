@@ -1,8 +1,91 @@
 @inherits A2UIComponentBase
-@* Placeholder - to be fully implemented *@
-<div class="@GetCssClass()">TextField Component</div>
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    @if (!string.IsNullOrEmpty(ResolvedLabel))
+    {
+        <label style="display: block; margin-bottom: 4px; font-weight: 500;">@ResolvedLabel</label>
+    }
+    @if (UsageHint == "longText")
+    {
+        <textarea @bind="CurrentText" 
+                  @bind:event="oninput"
+                  @onchange="HandleChange"
+                  rows="4"
+                  style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
+                  pattern="@ValidationRegexp"></textarea>
+    }
+    else
+    {
+        <input type="@GetInputType()" 
+               @bind="CurrentText" 
+               @bind:event="oninput"
+               @onchange="HandleChange"
+               style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
+               pattern="@ValidationRegexp" />
+    }
+</div>
 
 @code {
-    protected override string GetCssClass() => Theme.Components.TextField;
+    private string? ResolvedLabel;
+    private string CurrentText = "";
+    private string? UsageHint;
+    private string? ValidationRegexp;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the label bound value
+        var labelValue = GetDictionaryProperty("label");
+        if (labelValue != null)
+        {
+            ResolvedLabel = BindingResolver.ResolveString(labelValue, SurfaceId, Component.DataContextPath);
+        }
+
+        // Get the text bound value
+        var textValue = GetDictionaryProperty("text");
+        if (textValue != null)
+        {
+            CurrentText = BindingResolver.ResolveString(textValue, SurfaceId, Component.DataContextPath) ?? "";
+        }
+
+        UsageHint = GetStringProperty("usageHint");
+        ValidationRegexp = GetStringProperty("validationRegexp");
+    }
+
+    private string GetInputType()
+    {
+        return UsageHint?.ToLower() switch
+        {
+            "number" => "number",
+            "obscured" => "password",
+            _ => "text"
+        };
+    }
+
+    private void HandleChange()
+    {
+        // Dispatch data update event
+        var textValue = GetDictionaryProperty("text");
+        if (textValue != null && textValue.TryGetValue("path", out var pathObj) && pathObj is string path)
+        {
+            var dataUpdate = EventDispatcher.CreateDataUpdate(
+                SurfaceId,
+                Component.Id,
+                path,
+                CurrentText
+            );
+            EventDispatcher.DispatchDataUpdate(dataUpdate);
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.TextField;
+    }
 }
 

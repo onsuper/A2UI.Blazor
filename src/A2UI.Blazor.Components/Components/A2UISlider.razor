@@ -1,8 +1,85 @@
 @inherits A2UIComponentBase
-@* Placeholder - to be fully implemented *@
-<div class="@GetCssClass()">Slider Component</div>
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    @if (!string.IsNullOrEmpty(ResolvedLabel))
+    {
+        <label style="display: block; margin-bottom: 4px; font-weight: 500;">@ResolvedLabel</label>
+    }
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <input type="range" 
+               min="@Min" 
+               max="@Max" 
+               @bind="CurrentValue" 
+               @bind:event="oninput"
+               @onchange="HandleChange"
+               style="flex: 1;" />
+        <span style="min-width: 40px; text-align: right;">@CurrentValue</span>
+    </div>
+</div>
 
 @code {
-    protected override string GetCssClass() => Theme.Components.Slider;
+    private string? ResolvedLabel;
+    private double CurrentValue;
+    private double Min;
+    private double Max = 100;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the label bound value
+        var labelValue = GetDictionaryProperty("label");
+        if (labelValue != null)
+        {
+            ResolvedLabel = BindingResolver.ResolveString(labelValue, SurfaceId, Component.DataContextPath);
+        }
+
+        // Get min and max
+        if (Component.Properties.TryGetValue("min", out var minValue))
+        {
+            Min = Convert.ToDouble(minValue);
+        }
+
+        if (Component.Properties.TryGetValue("max", out var maxValue))
+        {
+            Max = Convert.ToDouble(maxValue);
+        }
+
+        // Get the value bound value
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null)
+        {
+            var resolvedValue = BindingResolver.ResolveValue(valueData, SurfaceId, Component.DataContextPath);
+            if (resolvedValue != null)
+            {
+                CurrentValue = Convert.ToDouble(resolvedValue);
+            }
+        }
+    }
+
+    private void HandleChange()
+    {
+        // Dispatch data update event
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
+        {
+            var dataUpdate = EventDispatcher.CreateDataUpdate(
+                SurfaceId,
+                Component.Id,
+                path,
+                CurrentValue
+            );
+            EventDispatcher.DispatchDataUpdate(dataUpdate);
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Slider;
+    }
 }
 

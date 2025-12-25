@@ -1,8 +1,108 @@
 @inherits A2UIComponentBase
-@* Placeholder - to be fully implemented *@
-<div class="@GetCssClass()">DateTimeInput Component</div>
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    @if (!string.IsNullOrEmpty(ResolvedLabel))
+    {
+        <label style="display: block; margin-bottom: 4px; font-weight: 500;">@ResolvedLabel</label>
+    }
+    <input type="@GetInputType()" 
+           @bind="CurrentValue" 
+           @onchange="HandleChange"
+           style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
+</div>
 
 @code {
-    protected override string GetCssClass() => Theme.Components.DateTimeInput;
+    private string? ResolvedLabel;
+    private string CurrentValue = "";
+    private bool EnableDate;
+    private bool EnableTime;
+    private string? OutputFormat;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the label bound value
+        var labelValue = GetDictionaryProperty("label");
+        if (labelValue != null)
+        {
+            ResolvedLabel = BindingResolver.ResolveString(labelValue, SurfaceId, Component.DataContextPath);
+        }
+
+        // Get the value bound value
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null)
+        {
+            CurrentValue = BindingResolver.ResolveString(valueData, SurfaceId, Component.DataContextPath) ?? "";
+        }
+
+        EnableDate = GetBoolProperty("enableDate", true);
+        EnableTime = GetBoolProperty("enableTime", false);
+        OutputFormat = GetStringProperty("outputFormat");
+    }
+
+    private string GetInputType()
+    {
+        if (EnableDate && EnableTime)
+            return "datetime-local";
+        else if (EnableDate)
+            return "date";
+        else if (EnableTime)
+            return "time";
+        return "date";
+    }
+
+    private void HandleChange(ChangeEventArgs e)
+    {
+        if (e.Value is string newValue)
+        {
+            CurrentValue = newValue;
+
+            // Format the value if outputFormat is specified
+            var formattedValue = FormatDateTime(newValue);
+
+            // Dispatch data update event
+            var valueData = GetDictionaryProperty("value");
+            if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
+            {
+                var dataUpdate = EventDispatcher.CreateDataUpdate(
+                    SurfaceId,
+                    Component.Id,
+                    path,
+                    formattedValue
+                );
+                EventDispatcher.DispatchDataUpdate(dataUpdate);
+            }
+        }
+    }
+
+    private string FormatDateTime(string value)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(OutputFormat))
+            return value;
+
+        try
+        {
+            if (DateTime.TryParse(value, out var dateTime))
+            {
+                return dateTime.ToString(OutputFormat);
+            }
+        }
+        catch
+        {
+            // If formatting fails, return original value
+        }
+
+        return value;
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.DateTimeInput;
+    }
 }
 
