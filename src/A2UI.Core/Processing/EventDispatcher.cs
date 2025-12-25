@@ -18,6 +18,11 @@ public class EventDispatcher
     public event EventHandler<ErrorEventArgs>? ErrorDispatched;
 
     /// <summary>
+    /// Event raised when data is updated from a component.
+    /// </summary>
+    public event EventHandler<DataUpdateEventArgs>? DataUpdateDispatched;
+
+    /// <summary>
     /// Dispatches a user action.
     /// </summary>
     public void DispatchUserAction(UserActionMessage action)
@@ -31,6 +36,14 @@ public class EventDispatcher
     public void DispatchError(Dictionary<string, object> error)
     {
         ErrorDispatched?.Invoke(this, new ErrorEventArgs(error));
+    }
+
+    /// <summary>
+    /// Dispatches a data update event.
+    /// </summary>
+    public void DispatchDataUpdate(DataUpdateMessage update)
+    {
+        DataUpdateDispatched?.Invoke(this, new DataUpdateEventArgs(update));
     }
 
     /// <summary>
@@ -73,6 +86,25 @@ public class EventDispatcher
             Error = error
         };
     }
+
+    /// <summary>
+    /// Creates a data update message for component data changes.
+    /// </summary>
+    public static DataUpdateMessage CreateDataUpdate(
+        string surfaceId,
+        string componentId,
+        string path,
+        object value)
+    {
+        return new DataUpdateMessage
+        {
+            SurfaceId = surfaceId,
+            ComponentId = componentId,
+            Path = path,
+            Value = value,
+            Timestamp = DateTime.UtcNow
+        };
+    }
 }
 
 /// <summary>
@@ -99,5 +131,30 @@ public class ErrorEventArgs : EventArgs
     {
         Error = error;
     }
+}
+
+/// <summary>
+/// Event args for data updates.
+/// </summary>
+public class DataUpdateEventArgs : EventArgs
+{
+    public DataUpdateMessage Update { get; }
+
+    public DataUpdateEventArgs(DataUpdateMessage update)
+    {
+        Update = update;
+    }
+}
+
+/// <summary>
+/// Message for data updates from components.
+/// </summary>
+public class DataUpdateMessage
+{
+    public string SurfaceId { get; set; } = "";
+    public string ComponentId { get; set; } = "";
+    public string Path { get; set; } = "";
+    public object? Value { get; set; }
+    public DateTime Timestamp { get; set; }
 }
 

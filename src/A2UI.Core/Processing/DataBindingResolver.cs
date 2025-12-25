@@ -141,6 +141,14 @@ public class DataBindingResolver
     }
 
     /// <summary>
+    /// Resolves a bound value (generic object return).
+    /// </summary>
+    public object? ResolveValue(Dictionary<string, object> boundValue, string surfaceId, string? dataContextPath = null)
+    {
+        return ResolveBoundValue<object>(boundValue, surfaceId, dataContextPath);
+    }
+
+    /// <summary>
     /// Resolves action context entries against the data model.
     /// </summary>
     public Dictionary<string, object> ResolveActionContext(

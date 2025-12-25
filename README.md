@@ -389,15 +389,11 @@ var dataMessages = new List<ServerToClientMessage>
 
 ## 文档
 
-- [A2UI 协议规范](../specification/0.8/docs/a2ui_protocol.md)
-- [组件目录](../specification/0.8/json/standard_catalog_definition.json)
-- [渲染器开发指南](../docs/guides/renderer-development.md)
+- [A2UI 组件 JSON 使用指南](A2UI_COMPONENTS_JSON_GUIDE.md) - 详细的组件使用文档和 JSON 示例
 
 ## 许可证
 
-Apache 2.0 - 参见 [LICENSE](../LICENSE)
+Apache 2.0 - 参见 [LICENSE](LICENSE)
 
-## 贡献
 
-欢迎贡献！请参阅 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解详情。
 

@@ -10,17 +10,30 @@
         <label style="display: block; margin-bottom: 4px; font-weight: 500;">@ResolvedLabel</label>
     }
     <input type="@GetInputType()" 
-           @bind="CurrentValue" 
-           @onchange="HandleChange"
+           @bind="CurrentValue"
+           @bind:event="onchange"
            style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px;" />
 </div>
 
 @code {
     private string? ResolvedLabel;
-    private string CurrentValue = "";
+    private string _currentValue = "";
     private bool EnableDate;
     private bool EnableTime;
     private string? OutputFormat;
+
+    private string CurrentValue
+    {
+        get => _currentValue;
+        set
+        {
+            if (_currentValue != value)
+            {
+                _currentValue = value;
+                HandleChange(value);
+            }
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -37,7 +50,7 @@
         var valueData = GetDictionaryProperty("value");
         if (valueData != null)
         {
-            CurrentValue = BindingResolver.ResolveString(valueData, SurfaceId, Component.DataContextPath) ?? "";
+            _currentValue = BindingResolver.ResolveString(valueData, SurfaceId, Component.DataContextPath) ?? "";
         }
 
         EnableDate = GetBoolProperty("enableDate", true);
@@ -56,27 +69,22 @@
         return "date";
     }
 
-    private void HandleChange(ChangeEventArgs e)
+    private void HandleChange(string newValue)
     {
-        if (e.Value is string newValue)
+        // Format the value if outputFormat is specified
+        var formattedValue = FormatDateTime(newValue);
+
+        // Dispatch data update event
+        var valueData = GetDictionaryProperty("value");
+        if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
         {
-            CurrentValue = newValue;
-
-            // Format the value if outputFormat is specified
-            var formattedValue = FormatDateTime(newValue);
-
-            // Dispatch data update event
-            var valueData = GetDictionaryProperty("value");
-            if (valueData != null && valueData.TryGetValue("path", out var pathObj) && pathObj is string path)
-            {
-                var dataUpdate = EventDispatcher.CreateDataUpdate(
-                    SurfaceId,
-                    Component.Id,
-                    path,
-                    formattedValue
-                );
-                EventDispatcher.DispatchDataUpdate(dataUpdate);
-            }
+            var dataUpdate = EventDispatcher.CreateDataUpdate(
+                SurfaceId,
+                Component.Id,
+                path,
+                formattedValue
+            );
+            EventDispatcher.DispatchDataUpdate(dataUpdate);
         }
     }
 
