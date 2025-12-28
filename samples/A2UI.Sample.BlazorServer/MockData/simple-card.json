@@ -13,15 +13,41 @@
         { "id": "root", "component": { "Card": { "child": "content" } } },
         {
           "id": "content",
-          "component": { "Column": { "children": { "explicitList": ["title", "body"] } } }
+          "component": { "Column": { "children": { "explicitList": ["title", "markdown-demo", "divider", "subtitle", "markdown-content"] } } }
         },
         {
           "id": "title",
-          "component": { "Text": { "text": { "literalString": "简单卡片" }, "usageHint": "h2" } }
+          "component": { "Text": { "text": { "literalString": "📝 Markdown 卡片示例" }, "usageHint": "h2" } }
         },
         {
-          "id": "body",
-          "component": { "Text": { "text": { "literalString": "这是一个由 Agent 返回的简单卡片。" } } }
+          "id": "markdown-demo",
+          "component": { 
+            "Text": { 
+              "text": { 
+                "literalString": "这是一个**展示Markdown功能**的卡片。支持*斜体*、**粗体**、~~删除线~~和`代码`。" 
+              },
+              "markdown": true
+            } 
+          }
+        },
+        {
+          "id": "divider",
+          "component": { "Divider": {} }
+        },
+        {
+          "id": "subtitle",
+          "component": { "Text": { "text": { "literalString": "功能列表" }, "usageHint": "h3" } }
+        },
+        {
+          "id": "markdown-content",
+          "component": { 
+            "Text": { 
+              "text": { 
+                "literalString": "### Markdown 特性\n\n- ✅ **粗体文本**和*斜体文本*\n- ✅ [链接支持](https://github.com)\n- ✅ `代码片段`和代码块\n- ✅ 列表和引用\n\n> 💡 **提示**: 这是一个引用块，用于显示提示信息。\n\n#### 代码示例\n\n```csharp\npublic class Hello \n{\n    public string World => \"A2UI Blazor\";\n}\n```\n\n**表格支持:**\n\n| 功能 | 状态 | 说明 |\n|------|------|------|\n| Markdown | ✅ | 完全支持 |\n| 表格 | ✅ | GitHub风格 |\n| 代码高亮 | ✅ | 语法识别 |" 
+              },
+              "markdown": true
+            } 
+          }
         }
       ]
     }

@@ -1,40 +1,47 @@
 @inherits A2UIComponentBase
 @using A2UI.Core.Processing
+@using A2UI.Blazor.Components.Services
 @inject DataBindingResolver BindingResolver
+@inject MarkdownRenderer MarkdownRenderer
 
 @{
-    Console.WriteLine($"[A2UIText] Rendering text: '{ResolvedText?.Substring(0, Math.Min(50, ResolvedText?.Length ?? 0))}', UsageHint={UsageHint}");
+    Console.WriteLine($"[A2UIText] Rendering text: '{ResolvedText?.Substring(0, Math.Min(50, ResolvedText?.Length ?? 0))}', UsageHint={UsageHint}, IsMarkdown={IsMarkdownContent}");
 }
 
-@if (!string.IsNullOrEmpty(ResolvedText))
+@if (!string.IsNullOrEmpty(RenderedContent))
 {
     @if (UsageHint == "h1")
     {
-        <h1 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h1>
+        <h1 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</h1>
     }
     else if (UsageHint == "h2")
     {
-        <h2 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h2>
+        <h2 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</h2>
     }
     else if (UsageHint == "h3")
     {
-        <h3 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h3>
+        <h3 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</h3>
     }
     else if (UsageHint == "h4")
     {
-        <h4 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h4>
+        <h4 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</h4>
     }
     else if (UsageHint == "h5")
     {
-        <h5 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h5>
+        <h5 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</h5>
     }
     else if (UsageHint == "caption")
     {
-        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</p>
+        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</p>
+    }
+    else if (IsMarkdownContent)
+    {
+        @* For markdown content, render as a div to preserve block structure *@
+        <div class="@GetCssClass() a2ui-markdown" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</div>
     }
     else
     {
-        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</p>
+        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)RenderedContent)</p>
     }
 }
 else
@@ -44,7 +51,9 @@ else
 
 @code {
     private string? ResolvedText;
+    private string? RenderedContent;
     private string? UsageHint;
+    private bool IsMarkdownContent;
 
     protected override void OnParametersSet()
     {
@@ -65,6 +74,62 @@ else
         // Get usage hint
         UsageHint = GetStringProperty("usageHint");
         Console.WriteLine($"[A2UIText] UsageHint: {UsageHint}");
+
+        // Get markdown flag (optional explicit flag)
+        var markdownFlag = GetProperty<bool?>("markdown");
+        
+        // Auto-detect or use explicit flag
+        IsMarkdownContent = markdownFlag ?? Services.MarkdownRenderer.IsMarkdown(ResolvedText ?? "");
+
+        // Render content (markdown or plain text)
+        if (!string.IsNullOrEmpty(ResolvedText))
+        {
+            if (IsMarkdownContent)
+            {
+                // Get optional tag class map for markdown styling
+                var tagClassMap = GetTagClassMap();
+                RenderedContent = MarkdownRenderer.Render(ResolvedText, tagClassMap);
+            }
+            else
+            {
+                // Plain text - escape HTML for safety
+                RenderedContent = Services.MarkdownRenderer.EscapeHtml(ResolvedText);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Get tag class map for markdown rendering customization.
+    /// This allows A2UI messages to specify CSS classes for specific HTML tags.
+    /// </summary>
+    private Dictionary<string, string[]>? GetTagClassMap()
+    {
+        var tagClassMapProperty = GetDictionaryProperty("tagClassMap");
+        if (tagClassMapProperty == null)
+            return null;
+
+        var result = new Dictionary<string, string[]>();
+        
+        foreach (var kvp in tagClassMapProperty)
+        {
+            if (kvp.Value is System.Collections.IEnumerable enumerable && kvp.Value is not string)
+            {
+                var classes = new List<string>();
+                foreach (var item in enumerable)
+                {
+                    if (item?.ToString() is string className)
+                        classes.Add(className);
+                }
+                if (classes.Count > 0)
+                    result[kvp.Key] = classes.ToArray();
+            }
+            else if (kvp.Value?.ToString() is string className)
+            {
+                result[kvp.Key] = new[] { className };
+            }
+        }
+
+        return result.Count > 0 ? result : null;
     }
 
     protected override string GetCssClass()

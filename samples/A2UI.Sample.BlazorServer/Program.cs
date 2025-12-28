@@ -2,6 +2,7 @@ using A2UI.Sample.BlazorServer.Components;
 using A2UI.Sample.BlazorServer.Services;
 using A2UI.Core.Processing;
 using A2UI.Theming;
+using A2UI.Blazor.Components.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddScoped<DataBindingResolver>(sp =>
     new DataBindingResolver(sp.GetRequiredService<MessageProcessor>()));
 builder.Services.AddScoped<EventDispatcher>();
 builder.Services.AddSingleton<ThemeService>(); // Theme service can be singleton as it's read-only
+builder.Services.AddSingleton<MarkdownRenderer>(); // Markdown renderer is stateless and can be singleton
 
 // Add A2A services (Agent and Client)
 builder.Services.AddScoped<MockA2AAgent>();
